@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from app.database import engine, Base
 from app.task import router as task
+from fastapi.middleware.cors import CORSMiddleware 
 import logging
 
 import uvicorn
@@ -37,5 +38,10 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 app.include_router(task)
 
-if __name__ == '__main__':
-    uvicorn.run('main:app', port=8000, host='0.0.0.0', reload=True, loop="asyncio")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+    allow_credentials=True
+)
