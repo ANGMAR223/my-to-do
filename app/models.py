@@ -1,5 +1,5 @@
 from app.database import Base
-from sqlalchemy import Column, String, DateTime, Integer, func, Boolean
+from sqlalchemy import Column, String, DateTime, Integer, func, Boolean, Date, CheckConstraint
 
 class Task(Base):
     
@@ -34,4 +34,22 @@ class Task(Base):
     created_at = Column(
         DateTime,
         server_default=func.now()
+    )
+    
+    deadline = Column(
+        Date,
+        nullable=True
+    )
+    
+    priority = Column(
+        Integer,
+        default=2,
+        nullable=False,
+        index=True
+    )
+    
+    __table_args__ = (CheckConstraint(
+        'priority >= 1 AND priority <=3',
+        name='check_priority_range'
+        ),
     )

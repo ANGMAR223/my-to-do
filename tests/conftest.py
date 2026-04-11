@@ -5,7 +5,6 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.database import Base, get_db
-from app.models import Task
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
@@ -17,8 +16,9 @@ TestAsyncSessionLocal = async_sessionmaker(
 
 @pytest_asyncio.fixture(autouse=True)
 async def prepare_test_db():
-    """Перед каждым тестом создаём таблицы в in-memory БД."""
+    """Перед каждым тестом пересоздаём таблицы для чистой БД."""
     async with test_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
     yield
 
@@ -32,3 +32,8 @@ def client():
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
+    
+@pytest_asyncio.fixture
+async def db_session():
+    async with TestAsyncSessionLocal() as session:
+        yield session

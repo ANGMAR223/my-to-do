@@ -5,7 +5,7 @@ from app.schemas import CreateTask, TaskResponse, UpdataTask
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import List, Dict
-from datetime import datetime
+from datetime import datetime, date, timedelta
 import logging
 
 logger = logging.getLogger(__name__)
@@ -20,7 +20,9 @@ async def create_task(create_task:  CreateTask, db: AsyncSession = Depends(get_d
     update_task = Task(
         title = create_task.title,
         description = create_task.description,
-        is_completed = create_task.is_completed
+        is_completed = create_task.is_completed,
+        deadline = create_task.deadline,
+        priority = create_task.priority
     )
     try:
         
@@ -40,17 +42,32 @@ async def create_task(create_task:  CreateTask, db: AsyncSession = Depends(get_d
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail='Ошибка создания задачи')
 
 @router.get('/', summary='Получить все задачи', response_model=List[TaskResponse])
-async def get_all_tasks(db: AsyncSession = Depends(get_db)) -> List[TaskResponse]:
-    
-    logger.info('Попытка получить все задачи из базы данных')
+async def get_all_tasks(
+    db: AsyncSession = Depends(get_db),
+    sort_by: str = 'id',
+    show_completed: bool = True
+) -> List[TaskResponse]:
+    logger.info(f'Попытка получить все задачи из базы данных. Фильтр: {sort_by}')
     
     try:
-        
         query = select(Task)
+        
+        if not show_completed:
+            query = query.where(Task.is_completed == False)
+        
+        if sort_by == 'priority':
+            query = query.order_by(Task.priority.desc(), Task.deadline.nullslast())
+        elif sort_by == 'deadline':
+            query = query.order_by(Task.deadline.asc().nullslast(), Task.priority.desc())
+        elif sort_by == 'created_at':
+            query = query.order_by(Task.created_at.desc())
+        else:
+            query = query.order_by(Task.id.desc())
+            
         result = await db.execute(query)
         all_tasks = result.scalars().all()
         
-        logger.info('Все задачи успешно получены')
+        logger.info(f'Все задачи успешно получены. Фильтр: {sort_by}')
     
         return all_tasks
         
@@ -59,10 +76,35 @@ async def get_all_tasks(db: AsyncSession = Depends(get_db)) -> List[TaskResponse
         logger.error(f'Ошибка при попытке получить все задачи {e}')
         
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Ошибка получения задач")
+    
+@router.get('/today', response_model=List[TaskResponse], summary='Задачи на сегодня')
+async def get_today_tasks(db: AsyncSession = Depends(get_db)):
+    today = date.today()
+    query = select(Task).where(Task.deadline == today, Task.is_completed == False).order_by(Task.priority.desc())
+    
+    result = await db.execute(query)
+    return result.scalars().all()
+
+@router.get('/upcoming', response_model=List[TaskResponse], summary='Ближайшие задачи')
+async def get_upcoming_tasks(db: AsyncSession = Depends(get_db), days: int = 7):
+    today = date.today()
+    end_date = today + timedelta(days=days)
+    
+    query = select(Task).where(Task.deadline.between(today, end_date)).order_by(Task.deadline.asc(), Task.priority.desc())
+    
+    result = await db.execute(query)
+    return result.scalars().all()
+
+@router.get('/overdue', response_model=List[TaskResponse], summary='Просроченные задачи')
+async def get_overdue_tasks(db: AsyncSession = Depends(get_db)):
+    today = date.today()
+    query = select(Task).where(Task.deadline < today, not Task.is_completed).order_by(Task.deadline.asc())
+    
+    result = await db.execute(query)
+    return result.scalars().all()
 
 @router.get('/{task_id}', response_model=TaskResponse, summary='Получить задачу из БД по id')
 async def get_task_by_id(task_id: int, db: AsyncSession = Depends(get_db)) -> TaskResponse:
-    
     logger.info(f"Попытка получить задачу по id {task_id}")
     
     try:
@@ -88,7 +130,6 @@ async def get_task_by_id(task_id: int, db: AsyncSession = Depends(get_db)) -> Ta
 
 @router.delete('/{task_id}', summary='Удаление задачи из БД')
 async def delete_task(task_id: int, db: AsyncSession = Depends(get_db)) -> Dict:
-    
     logger.info(f'Попытка удалить задачу с id {task_id}')
     
     try:
@@ -130,11 +171,9 @@ async def delete_task(task_id: int, db: AsyncSession = Depends(get_db)) -> Dict:
     
 @router.put('/{task_id}', response_model=TaskResponse, summary='Полное обновление задачи')
 async def update_task(task_id: int, update_task: UpdataTask, db: AsyncSession = Depends(get_db)):
-    
     logger.info(f'Попытка обновить задачу по id {task_id}')
     
     try:
-    
         query = select(Task).where(Task.id == task_id)
         result = await db.execute(query)
         task = result.scalar_one_or_none()
@@ -164,11 +203,3 @@ async def update_task(task_id: int, update_task: UpdataTask, db: AsyncSession = 
         
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Ошибка при обновлении отеля")
     
-    
-    
-
-        
-        
-
-    
-        
