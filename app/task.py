@@ -126,7 +126,7 @@ async def delete_task(task_id: int, db: AsyncSession = Depends(get_db)) -> Dict:
         
         await db.rollback()
         
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Ошибка при удалении отеля: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Ошибка при удалении задачи: {str(e)}")
     
 @router.put('/{task_id}', response_model=TaskResponse, summary='Полное обновление задачи')
 async def update_task(task_id: int, update_task: UpdataTask, db: AsyncSession = Depends(get_db)):
