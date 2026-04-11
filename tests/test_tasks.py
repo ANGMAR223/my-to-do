@@ -166,7 +166,6 @@ async def test_get_upcoming_tasks(client):
     assert len(data) == 1
     assert data[0]["title"] == "В диапазоне"
 
-@pytest.mark.skip(reason="Пропущен из-за конфликта валидации Pydantic и изоляции транзакций SQLite")
 @pytest.mark.asyncio
 async def test_get_overdue_tasks(client):
     yesterday = date.today() - timedelta(days=1)
@@ -178,6 +177,8 @@ async def test_get_overdue_tasks(client):
 
     update_data = {
         "title": "Просрочено",
+        "descriprion": 'Проверка просроченой задачи',
+        "is_completed": False,
         "deadline": yesterday.isoformat(),
         "priority": 2
     }

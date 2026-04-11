@@ -24,6 +24,10 @@ async def create_task(create_task:  CreateTask, db: AsyncSession = Depends(get_d
         deadline = create_task.deadline,
         priority = create_task.priority
     )
+    
+    if create_task.deadline is not None and create_task.deadline < date.today():
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail='Дедлайн не может быть в прошлом')
+    
     try:
         
         db.add(update_task)
@@ -98,7 +102,7 @@ async def get_upcoming_tasks(db: AsyncSession = Depends(get_db), days: int = 7):
 @router.get('/overdue', response_model=List[TaskResponse], summary='Просроченные задачи')
 async def get_overdue_tasks(db: AsyncSession = Depends(get_db)):
     today = date.today()
-    query = select(Task).where(Task.deadline < today, not Task.is_completed).order_by(Task.deadline.asc())
+    query = select(Task).where(Task.deadline < today, Task.is_completed == False).order_by(Task.deadline.asc())
     
     result = await db.execute(query)
     return result.scalars().all()
@@ -184,6 +188,8 @@ async def update_task(task_id: int, update_task: UpdataTask, db: AsyncSession = 
         task.title = update_task.title
         task.description = update_task.description
         task.is_completed = update_task.is_completed
+        task.deadline = update_task.deadline
+        task.priority = update_task.priority
 
         await db.commit()
         await db.refresh(task)

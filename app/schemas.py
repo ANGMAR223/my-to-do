@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional
 from datetime import datetime, date
 
@@ -34,19 +34,10 @@ class CreateTask(BaseModel):
         json_schema_extra={'example': 2},
         description='1 - низкий, 2 - средний, 3 - высокий'
     )
-    
-    @field_validator('deadline')
-    def deadline_not_in_past(cls, v: Optional[date]) -> Optional[date]:
-        if v is not None and v < date.today():
-            raise ValueError('Дедлайн не может быть в прошлом')
-        return v
-    
+
 class UpdataTask(CreateTask):
-    @field_validator('deadline')
-    def deadline_can_be_past(cls, v: Optional[date]) -> Optional[date]:
-        return v
-    
-    
+    pass
+
 class TaskResponse(BaseModel):
     
     model_config = ConfigDict(from_attributes=True)
