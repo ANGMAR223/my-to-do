@@ -10,6 +10,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from config import API_BASE_URL
 import httpx
+from aiogram.client.session.aiohttp import AiohttpSession
+from aiogram.client.telegram import TelegramAPIServer
 
 logging.basicConfig(
     level=logging.INFO,
@@ -21,11 +23,15 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
+WORKER_URL = "https://telegram-proxy.wngarinech.workers.dev"
+
+custom_api_server = TelegramAPIServer.from_base(WORKER_URL)
+
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 if not BOT_TOKEN:
     raise ValueError("BOT_TOKEN is not set in the environment variables.")
 
-bot = Bot(token=BOT_TOKEN)
+bot = Bot(token=BOT_TOKEN, session=AiohttpSession(), api_server=custom_api_server)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 
@@ -38,7 +44,7 @@ class AddTaskState(StatesGroup):
 
 
 async def create_task_in_api(task_data: dict) -> dict | None:
-    url = f"{API_BASE_URL}tasks/"
+    url = f"{API_BASE_URL}/tasks/"
     payload = {**task_data, "user_id": 1}
 
     async with httpx.AsyncClient() as client:
