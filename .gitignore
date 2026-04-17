@@ -3,3 +3,4 @@ __pycache__/
 *.db
 app.log
 *.code-workspace
+*.env
