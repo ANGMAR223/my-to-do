@@ -1,7 +1,7 @@
 venv/
 __pycache__/
 *.db
-app.log
+*.log
 *.code-workspace
 *.env
-bot_log.log
+set_webhook.py

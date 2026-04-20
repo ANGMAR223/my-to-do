@@ -1,1 +1,0 @@
-API_BASE_URL = "https://my-todo-api-ono2.onrender.com"
