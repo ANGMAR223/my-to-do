@@ -41,7 +41,26 @@ class TaskResponse(BaseModel):
     id: int
     title: str
     is_completed: bool
+    user_id: int
     description: Optional[str]
     created_at: datetime
     deadline: Optional[date]
     priority: int
+    
+
+class UserBase(BaseModel):
+    telegram_id: int = Field(..., json_schema_extra={"example": 123456789})
+    user_name: Optional[str] = Field(None, max_length=100, json_schema_extra={"example": "john_doe"})
+    first_name: Optional[str] = Field(None, max_length=100, json_schema_extra={"example": "John"})
+    
+    
+class UserCreate(UserBase):
+    pass
+
+
+class UserResponse(UserBase):
+    
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    created_at: datetime

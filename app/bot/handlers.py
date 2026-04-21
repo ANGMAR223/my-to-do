@@ -1,7 +1,6 @@
-
 from aiogram import types, F, Router
 from aiogram.filters import CommandStart
-from app.bot.utils import get_main_keyboard, create_task_in_api
+from app.bot.utils import get_main_keyboard, create_task_in_api, get_task_from_api
 
 from app.bot.states import AddTaskState
 from aiogram.fsm.context import FSMContext
@@ -29,7 +28,28 @@ async def start_command(message: types.Message):
 
 @router.message(F.text == "📋 Мои задачи")
 async def my_tasks(message: types.Message):
-    await message.answer("Здесь будут отображаться ваши задачи.")
+
+    await message.answer("⏳ Загружаю твои задачи...")
+
+    user_id = message.from_user.id
+    result = await get_task_from_api(user_id)
+
+    if result:
+
+        response = "📋 Твои задачи:\n\n"
+
+        for task in result:
+            status = "✅" if task["is_completed"] else "❌"
+            deadline = task['deadline'] if task['deadline'] else "Без дедлайна"
+            response += (
+f"""
+{status} {task['title']} (Приоритет: {task['priority']})
+(Дедлайн: {deadline})\n
+"""
+            )
+        await message.answer(response)
+    else:
+        await message.answer("У тебя пока нет задач. Нажми ➕ Новая задача, чтобы добавить первую!")
 
 
 @router.message(F.text == "➕ Новая задача")
@@ -79,13 +99,12 @@ async def process_priority(message: types.Message, state: FSMContext):
 
     await message.answer("⏳ Сохраняю задачу...")
 
-    result = await create_task_in_api(task_data)
+    user_id = message.from_user.id
+    result = await create_task_in_api(task_data, user_id)
 
     if result:
         await message.answer(
-            f"✅ Задача успешно создана!\n" 
-            f"📌 {task_data['title']}\n" 
-            f"🔢 Приоритет: {priority}"
+            f"✅ Задача успешно создана!\n" f"📌 {task_data['title']}\n" f"🔢 Приоритет: {priority}"
         )
 
     await state.clear()
@@ -94,4 +113,3 @@ async def process_priority(message: types.Message, state: FSMContext):
 @router.message(F.text)
 async def unknown_message(message: types.Message):
     await message.answer("🤔 Я не знаю такой команды. Воспользуйся кнопками на клавиатуре.")
-
